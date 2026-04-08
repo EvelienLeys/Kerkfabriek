@@ -943,7 +943,7 @@ function render(key) {
 
 function go(key) {
   render(key);
-  window.scrollTo({top:0,behavior:'smooth'});
+  document.getElementById('nav').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 /* ─── INIT ─── */
