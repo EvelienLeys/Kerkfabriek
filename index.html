@@ -452,7 +452,9 @@ nl: {
   ag_leg_taize:"Taizé",
   ag_leg_night:"Bijstand by Night",
   ag_leg_act:"Activiteit",
-  ev_sun:"Zondagsviering",
+  ev_sun_eucharistie:"Mis met eucharistie",
+  ev_sun_woord:"Woorddienst met eucharistie",
+  ev_voorganger:"Voorganger",
   
   ev_taize:"Gebed in de geest van Taizé",
   ev_night:"Bijstand by Night (18–22 u)",
@@ -561,7 +563,9 @@ fr: {
   ag_leg_taize:"Taizé",
   ag_leg_night:"Bon Secours by Night",
   ag_leg_act:"Activité",
-  ev_sun:"Célébration dominicale",
+  ev_sun_eucharistie:"Messe avec eucharistie",
+  ev_sun_woord:"Célébration de la Parole avec eucharistie",
+  ev_voorganger:"Célébrant",
   ev_taize:"Prière dans l'esprit de Taizé",
   ev_night:"Bon Secours by Night (18h–22h)",
   ev_palm:"Dimanche des Rameaux",
@@ -669,7 +673,9 @@ en: {
   ag_leg_taize:"Taizé",
   ag_leg_night:"Good Help by Night",
   ag_leg_act:"Activity",
-  ev_sun:"Sunday service",
+  ev_sun_eucharistie:"Mass with Eucharist",
+  ev_sun_woord:"Liturgy of the Word with Eucharist",
+  ev_voorganger:"Celebrant",
   ev_taize:"Prayer in the spirit of Taizé",
   ev_night:"Good Help by Night (6–10 PM)",
   ev_palm:"Palm Sunday – Service",
@@ -777,7 +783,9 @@ de: {
   ag_leg_taize:"Taizé",
   ag_leg_night:"Guter Beistand by Night",
   ag_leg_act:"Veranstaltung",
-  ev_sun:"Sonntagsgottesdienst",
+  ev_sun_eucharistie:"Messe mit Eucharistie",
+  ev_sun_woord:"Wortgottesdienst mit Eucharistie",
+  ev_voorganger:"Zelebrant",
   ev_taize:"Gebet im Geist von Taizé",
   ev_night:"Guter Beistand by Night (18–22 Uhr)",
   ev_palm:"Palmsonntag – Gottesdienst",
@@ -885,7 +893,9 @@ es: {
   ag_leg_taize:"Taizé",
   ag_leg_night:"Buen Socorro by Night",
   ag_leg_act:"Actividad",
-  ev_sun:"Celebración dominical",
+  ev_sun_eucharistie:"Misa con eucaristía",
+  ev_sun_woord:"Liturgia de la Palabra con eucaristía",
+  ev_voorganger:"Celebrante",
   ev_taize:"Oración en el espíritu de Taizé",
   ev_night:"Buen Socorro by Night (18h–22h)",
   ev_palm:"Domingo de Ramos – Celebración",
@@ -993,7 +1003,9 @@ ar: {
   ag_leg_taize:"تيزيه",
   ag_leg_night:"الكنيسة ليلاً",
   ag_leg_act:"نشاط",
-  ev_sun:"قداس الأحد",
+  ev_sun_eucharistie:"قداس مع الإفخارستيا",
+  ev_sun_woord:"خدمة الكلمة مع الإفخارستيا",
+  ev_voorganger:"المحتفل",
   ev_sat:"قداس – فينيس تيريه",
   ev_taize:"صلاة على روح تيزيه",
   ev_night:"الكنيسة ليلاً (١٨–٢٢)",
@@ -1128,6 +1140,16 @@ const ML = {
 const dkey = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
 /* ─── AGENDA ENGINE ─── */
+
+  /* Voorganger per zondag: sleutel = datum 'YYYY-MM-DD' */
+const VOORGANGERS = {
+  '2026-05-03': 'Johnny De Mot',
+  '2026-05-10': '',
+  '2026-05-17': '',
+  '2026-05-24': '',   // 4e zondag → woorddienst
+  '2026-05-31': '',
+  // voeg hier verder aan toe...
+};
 const FIXED = [
   { datum:'2026-03-29', tijd:'11:00', type:'viering', tk:'ev_palm' },
   { datum:'2026-04-02', tijd:'17:00', type:'viering', tk:'ev_holy_thu' },
@@ -1183,7 +1205,13 @@ function agendaHTML() {
     const d=new Date(now); d.setDate(now.getDate()+i);
     const dw=d.getDay(), mn=d.getMonth(), yr=d.getFullYear(), nr=d.getDate(), sk=dkey(d);
     const base=[];
-    if (dw===0&&!['2026-04-05','2026-03-29'].includes(sk)) base.push({tijd:'11:00',type:'viering',tekst:t('ev_sun')});
+    if (dw===0 && !['2026-04-05','2026-03-29'].includes(sk)) {
+  const zondagNr = Math.ceil(d.getDate() / 7);
+  const isWoord  = zondagNr === 4;
+  const tkSun    = isWoord ? 'ev_sun_woord' : 'ev_sun_eucharistie';
+  const vg       = VOORGANGERS[sk] || '';
+  base.push({tijd:'11:00', type:'viering', tekst: t(tkSun), voorganger: vg});
+}
     const seen=new Set();
     const evs=[...base,...(events[sk]||[]).map(e=>({...e,tekst:t(e.tk)}))].filter(e=>{
       const k=`${e.tijd}|${e.tekst}`;
@@ -1200,11 +1228,13 @@ function agendaHTML() {
         <span class="dm">${ms_[mn]}</span>
       </div>
       <div class="events-cell">
-        ${evs.map(ev=>`<div class="ev-row">
-          <span class="ev-time">${ev.tijd}</span>
-          <span class="ev-dot">◆</span>
-          <span>${ev.tekst}</span>
-        </div>`).join('')}
+       ${evs.map(ev=>`<div class="ev-row">
+  <span class="ev-time">${ev.tijd}</span>
+  <span class="ev-dot">◆</span>
+  <span>${ev.tekst}${ev.voorganger
+    ? `<span style="margin-left:0.7rem;font-size:0.78rem;color:var(--muted);font-style:italic;">— ${t('ev_voorganger')}: ${ev.voorganger}</span>`
+    : ''}</span>
+</div>`).join('')}
       </div>
     </div>`;
   }
